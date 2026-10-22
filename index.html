@@ -19,7 +19,7 @@
 :root{
   --paper:#f3f5f1; --card:#ffffff; --ink:#15231d; --muted:#5e6f66; --line:#dbe3dd;
   --note:#1f6b52; --note-soft:#e1efe8; --warn:#b4471f;
-  --c-hrana:#2f7d5b; --c-izlasci:#b0672a; --c-fashion:#b3366f; --c-hobby:#2c6a99; --c-event:#7a4f93; --c-tech:#0b8aa0; --c-ostalo:#6b7570;
+  --c-food:#2f7d5b; --c-hangouts:#b0672a; --c-apparel:#b3366f; --c-hobby:#2c6a99; --c-event:#7a4f93; --c-tech:#0b8aa0; --c-other:#6b7570;
   --f-display:"Unbounded", "Arial Black", system-ui, sans-serif;
   --f-body:"Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
   --r:14px;
@@ -27,12 +27,12 @@
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --paper:#0f1613; --card:#17211c; --ink:#e6eee9; --muted:#97a89f; --line:#2a3832;
   --note:#5fc39a; --note-soft:#1c3329; --warn:#ef8a5e;
-  --c-hrana:#5fc39a; --c-izlasci:#e0a066; --c-fashion:#e57fa9; --c-hobby:#6fb0e0; --c-event:#bb92d6; --c-tech:#52c8dc; --c-ostalo:#a3aea8;
+  --c-food:#5fc39a; --c-hangouts:#e0a066; --c-apparel:#e57fa9; --c-hobby:#6fb0e0; --c-event:#bb92d6; --c-tech:#52c8dc; --c-other:#a3aea8;
   color-scheme:dark}}
 :root[data-theme="dark"]{
   --paper:#0f1613; --card:#17211c; --ink:#e6eee9; --muted:#97a89f; --line:#2a3832;
   --note:#5fc39a; --note-soft:#1c3329; --warn:#ef8a5e;
-  --c-hrana:#5fc39a; --c-izlasci:#e0a066; --c-fashion:#e57fa9; --c-hobby:#6fb0e0; --c-event:#bb92d6; --c-tech:#52c8dc; --c-ostalo:#a3aea8;
+  --c-food:#5fc39a; --c-hangouts:#e0a066; --c-apparel:#e57fa9; --c-hobby:#6fb0e0; --c-event:#bb92d6; --c-tech:#52c8dc; --c-other:#a3aea8;
   color-scheme:dark}
 *{box-sizing:border-box}
 :root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -201,9 +201,9 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
   <details class="bulk" id="bulk">
     <summary><h2>Unesi prethodne transakcije</h2></summary>
     <div class="bulk-body">
-      <p>Jedna stavka po redu: datum, iznos, pa po želji kategorija, radnja sa @ i napomena. Na primer <code>3.10. 1200 hrana ručak</code> ili <code>8.10. 4500 hobby @Decathlon, reket</code>.</p>
-      <p>Ako ne znaš datum, umesto njega stavi <code>?</code>. Za uplatu stavi <code>+</code> ispred iznosa. Bez kategorije trošak ide u Other. Kategorije: hrana, izlasci, fashion, hobby, event, tech, other.</p>
-      <textarea class="field" id="bulkIn" placeholder="3.10. 1200 hrana ručak&#10;5.10. 800 izlasci bleja sa drugarima&#10;8.10. 4500 hobby @Decathlon, reket&#10;? 2000 neki trošak&#10;10.10. +15000 @Mama" spellcheck="false" aria-label="Prethodne transakcije, jedna po redu"></textarea>
+      <p>Jedna stavka po redu: datum, iznos, pa po želji kategorija, radnja sa @ i napomena. Na primer <code>3.10. 1200 food ručak</code> ili <code>8.10. 4500 hobby @Decathlon, reket</code>.</p>
+      <p>Ako ne znaš datum, umesto njega stavi <code>?</code>. Za uplatu stavi <code>+</code> ispred iznosa. Bez kategorije trošak ide u Other. Kategorije: food, hangouts, apparel, hobby, event, tech, other.</p>
+      <textarea class="field" id="bulkIn" placeholder="3.10. 1200 food ručak&#10;5.10. 800 hangouts bleja sa drugarima&#10;8.10. 4500 hobby @Decathlon, reket&#10;? 2000 neki trošak&#10;10.10. +15000 @Mama" spellcheck="false" aria-label="Prethodne transakcije, jedna po redu"></textarea>
       <div class="preview" id="preview"></div>
       <button class="save" id="bulkSave" type="button" disabled>Upiši</button>
     </div>
@@ -236,13 +236,13 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 
 <script>
 const CATS=[
-  {id:"hrana",name:"Hrana"},
-  {id:"izlasci",name:"Izlasci"},
-  {id:"fashion",name:"Fashion"},
+  {id:"food",name:"Food"},
+  {id:"hangouts",name:"Hangouts"},
+  {id:"apparel",name:"Apparel"},
   {id:"hobby",name:"Hobby"},
   {id:"event",name:"Event"},
   {id:"tech",name:"Tech"},
-  {id:"ostalo",name:"Other"}
+  {id:"other",name:"Other"}
 ];
 const OTHER=CATS[CATS.length-1];
 const catById=Object.fromEntries(CATS.map(c=>[c.id,c]));
@@ -270,7 +270,10 @@ const now0=new Date();let viewY=now0.getFullYear(),viewM=now0.getMonth();
 /* ---- storage ---- */
 function lsGet(){try{const v=JSON.parse(localStorage.getItem("kes-v1")||"null");if(v&&Array.isArray(v.exps))return v.exps}catch(e){}return null}
 function lsSet(){try{localStorage.setItem("kes-v1",JSON.stringify({exps}))}catch(e){}}
-const cached=lsGet(); if(cached) exps=cached;
+// Stari id-jevi kategorija (pre preimenovanja) → novi
+const OLD_CATS={hrana:"food",izlasci:"hangouts",fashion:"apparel",ostalo:"other"};
+const cached=lsGet(); if(cached){exps=cached;
+  if(exps.some(e=>OLD_CATS[e.cat])){exps=exps.map(e=>OLD_CATS[e.cat]?{...e,cat:OLD_CATS[e.cat]}:e);lsSet()}}
 
 async function connect(){
   mode="local";
@@ -369,7 +372,7 @@ function resetForm(){amountStr="";$("note").value="";$("place").value="";cat=nul
 async function save(){
   const n=parseInt(amountStr||"0",10); if(!(n>0))return;
   if(editId){ await saveEdit(n); return; }
-  const e={id:newId(),type:txType,amount:n,cat:txType==="in"?"":(cat||"ostalo"),note:$("note").value.trim(),place:canonPlace($("place").value),...pickedTs()};
+  const e={id:newId(),type:txType,amount:n,cat:txType==="in"?"":(cat||"other"),note:$("note").value.trim(),place:canonPlace($("place").value),...pickedTs()};
   $("save").disabled=true;
   const ok=await addMany([e]);
   if(ok){ toast(isIn(e)?`Upisana uplata +${fmt(n)} din`:`Upisano ${fmt(n)} din`); resetForm(); }
@@ -398,7 +401,7 @@ async function saveEdit(n){
   let ts=orig.ts,noTime=orig.noTime,nd=!!orig.noDate;
   if(noDate){ if(!orig.noDate){ts=Date.now();noTime=true} nd=true }
   else if(orig.noDate||dateIn.value!==dayKey(orig.ts)){const p=pickedTs();ts=p.ts;noTime=p.noTime;nd=false}
-  const e={id:orig.id,type:txType,amount:n,cat:txType==="in"?"":(cat||"ostalo"),note:$("note").value.trim(),place:canonPlace($("place").value),ts,noTime,noDate:nd};
+  const e={id:orig.id,type:txType,amount:n,cat:txType==="in"?"":(cat||"other"),note:$("note").value.trim(),place:canonPlace($("place").value),ts,noTime,noDate:nd};
   $("save").disabled=true;let ok=true;
   if(mode==="db"&&col){try{await col.doc(e.id).set(body(e))}catch(err){ok=false;toast("Izmena nije sačuvana. Pokušaj ponovo.")}}
   else{exps=exps.map(x=>x.id===e.id?e:x);lsSet();render();}
@@ -407,8 +410,8 @@ async function saveEdit(n){
 $("editCancel").onclick=cancelEdit;
 
 /* ---- bulk ---- */
-const CAT_ALIASES={hrana:"hrana",izlasci:"izlasci",izlazak:"izlasci",fashion:"fashion",hobby:"hobby",hobi:"hobby",event:"event",eventi:"event",
-  tech:"tech",tehnika:"tech",tehnologija:"tech",other:"ostalo",ostalo:"ostalo",drugo:"ostalo"};
+const CAT_ALIASES={food:"food",hangouts:"hangouts",hangout:"hangouts",apparel:"apparel",hobby:"hobby",hobi:"hobby",event:"event",eventi:"event",
+  tech:"tech",tehnika:"tech",tehnologija:"tech",other:"other"};
 const INCOME_WORDS=["uplata","uplate","prihod","priliv"];
 function matchCat(w){const f=fold(w);if(CAT_ALIASES[f])return CAT_ALIASES[f];
   const hit=CATS.find(c=>f.length>=2&&c.id.startsWith(f));return hit?hit.id:null}
@@ -430,7 +433,7 @@ function parseLine(line){
   const first=rest.split(/\s+/)[0]||"";
   if(first&&INCOME_WORDS.includes(fold(first))){type="in";rest=rest.slice(first.length).trim()}
   else if(type==="out"){const cid=first&&!first.startsWith("@")?matchCat(first):null;
-    if(cid){c=cid;rest=rest.slice(first.length).trim()}else c="ostalo";}
+    if(cid){c=cid;rest=rest.slice(first.length).trim()}else c="other";}
   let place="",note=rest;const pm=note.match(/@([^,@]+)/);
   if(pm){place=canonPlace(pm[1]).slice(0,40);note=note.replace(pm[0],"").replace(/^\s*,\s*|\s*,\s*$/g,"").replace(/\s+/g," ")}
   return {e:{type,amount:a,cat:c,note:note.trim().slice(0,60),place,ts,noTime:true,noDate:nd}};
@@ -483,9 +486,9 @@ function render(){
   let rows;
   if(breakBy==="cat"){const by={};inM.forEach(e=>{const k=catOf(e.cat).id;by[k]=(by[k]||0)+e.amount});
     rows=CATS.filter(c=>by[c.id]).map(c=>({name:c.name,v:by[c.id],color:`var(--c-${c.id})`}));}
-  else{const by=new Map();inM.forEach(e=>{const k=e.place?fold(e.place):"";const r=by.get(k)||{name:e.place||"Bez radnje",v:0,color:e.place?"var(--note)":"var(--c-ostalo)"};r.v+=e.amount;by.set(k,r)});
+  else{const by=new Map();inM.forEach(e=>{const k=e.place?fold(e.place):"";const r=by.get(k)||{name:e.place||"Bez radnje",v:0,color:e.place?"var(--note)":"var(--c-other)"};r.v+=e.amount;by.set(k,r)});
     rows=[...by.values()];}
-  rows.sort((a,b)=>b.v-a.v);if(rows.length>8){const rest=rows.splice(7);rows.push({name:"Ostala mesta",v:sum(rest.map(r=>({amount:r.v}))),color:"var(--c-ostalo)"})}
+  rows.sort((a,b)=>b.v-a.v);if(rows.length>8){const rest=rows.splice(7);rows.push({name:"Ostala mesta",v:sum(rest.map(r=>({amount:r.v}))),color:"var(--c-other)"})}
   const max=Math.max(1,...rows.map(r=>r.v));
   $("cats").innerHTML=rows.length?rows.map(r=>`<div class="cat-row" style="--c:${r.color}"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.name)}</span><span class="track"><i style="width:${r.v/max*100}%"></i></span><span class="v">${fmt(r.v)} din</span></div>`).join("")+`<div class="cat-row"><span class="label">Ukupno</span><span></span><span class="v">${fmt(total)} din</span></div>`
     :`<div class="empty-state">Za ${MONTHS_FULL[viewM]} nema keš troškova.</div>`;
@@ -572,13 +575,13 @@ function importCSV(text){
   const h=rows[0].map(x=>fold(x.trim()));const ix=n=>h.findIndex(x=>x.startsWith(n));
   const iD=ix("datum"),iV=ix("vreme"),iT=ix("tip"),iA=ix("iznos"),iK=ix("kategorija"),iR=ix("radnja"),iN=ix("napomena");
   if(iA<0){toast("Ovo nije CSV iz Keš novčanika.");return}
-  const byName={ostalo:"ostalo"};CATS.forEach(c=>{byName[fold(c.name)]=c.id;byName[c.id]=c.id});
+  const byName={...OLD_CATS};CATS.forEach(c=>{byName[fold(c.name)]=c.id;byName[c.id]=c.id});
   const seen=new Set(exps.map(sig));const add=[];let dup=0,bad=0;
   for(const r of rows.slice(1)){
     const cell=i=>i>=0&&r[i]!=null?String(r[i]).trim():"";
     const amount=parseInt(cell(iA).replace(/[^\d]/g,""),10);if(!(amount>0)){bad++;continue}
     const type=fold(cell(iT)).startsWith("upl")?"in":"out";
-    const k=cell(iK);const cat=type==="in"?"":(byName[fold(k)]||(k?matchCat(k):null)||"ostalo");
+    const k=cell(iK);const cat=type==="in"?"":(byName[fold(k)]||(k?matchCat(k):null)||"other");
     const dm=cell(iD).match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);const tm=cell(iV).match(/(\d{1,2}):(\d{2})/);
     let ts,noTime=true,noDate=false;
     if(dm){const d=new Date(+dm[3],+dm[2]-1,+dm[1],12,0,0);if(tm){d.setHours(+tm[1],+tm[2]);noTime=false}ts=d.getTime()}
