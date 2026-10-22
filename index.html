@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Manrope:wght@400;500;600;700&display=swap">
 <style>
-/* Layout: one narrow phone column — month summary band, fast entry pad, category split, history. On wide screens: three columns (summary, month, bulk, CSV | entry | history), centered on the page. Banknote-green ink on cool paper. */
+/* Layout: one narrow phone column — month summary band, fast entry pad, category split, history. On wide screens: three columns (summary, month, bulk, CSV, wallet | entry | history), centered on the page. Banknote-green ink on cool paper. */
 :root{
   --paper:#f3f5f1; --card:#ffffff; --ink:#15231d; --muted:#5e6f66; --line:#dbe3dd;
   --note:#1f6b52; --note-soft:#e1efe8; --warn:#b4471f;
@@ -102,6 +102,20 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .seg{display:flex;border:1px solid var(--line);border-radius:12px;overflow:hidden;flex-shrink:0}
 .seg button{border:0;background:none;padding:9px 11px;font-size:13px;font-weight:600;color:var(--muted)}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--card)}
+/* once JS has measured it (.ready), the pressed state is a pill that slides between buttons */
+.seg{position:relative;isolation:isolate}
+.seg::before{content:"";position:absolute;z-index:-1;top:0;bottom:0;left:var(--x,0);width:var(--w,0);background:var(--ink)}
+.seg.ready::before{transition:left .28s cubic-bezier(.3,.7,.2,1),width .28s cubic-bezier(.3,.7,.2,1)}
+.seg.ready button[aria-pressed="true"]{background:none}
+.seg button{transition:color .2s}
+/* motion: month rows and bars when the view changes, chips when they come back, amount color */
+@keyframes rowIn{from{opacity:0;transform:translateY(5px)}}
+@keyframes barIn{from{transform:scaleX(0)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}}
+.cats.anim .cat-row{animation:rowIn .35s both;animation-delay:calc(var(--i,0)*35ms)}
+.cats.anim .track i{transform-origin:left;animation:barIn .55s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--i,0)*35ms)}
+.chips:not([hidden]){animation:fadeUp .25s ease-out}
+.amount .num,.sign{transition:color .25s}
 .save{border:0;border-radius:12px;background:var(--ink);color:var(--card);padding:14px;font-weight:700;font-size:16px}
 .save:disabled{opacity:.35;cursor:default}
 .hint{font-size:13px;color:var(--muted);text-align:center;min-height:1.3em;margin:-6px 0 0}
@@ -114,7 +128,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .bulk[open] summary::after{content:"–"}
 .bulk-body{padding:0 16px 16px;display:grid;gap:12px}
 .bulk-body p{margin:0;font-size:14px;color:var(--muted)}
-.bulk-body code{font-size:13px;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:1px 5px;color:var(--ink)}
+.bulk code{font-size:13px;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:1px 5px;color:var(--ink)}
 .bulk textarea{min-height:130px;resize:vertical;font-family:ui-monospace, "SF Mono", Menlo, Consolas, monospace;font-size:14px;line-height:1.5}
 .preview{display:grid;gap:4px;font-size:14px;max-height:260px;overflow:auto}
 .pv{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:6px 8px;border-radius:8px;background:var(--paper)}
@@ -137,6 +151,8 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .mnav span{font-weight:600;font-size:14px;min-width:110px;text-align:center}
 
 .list{display:grid;gap:14px}
+/* phone: a long history scrolls inside its own box */
+.hist .list{max-height:70vh;max-height:70dvh;overflow:auto;overscroll-behavior:contain;align-content:start}
 .dgroup{display:grid;gap:2px}
 .dgroup-h{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);font-weight:600;padding:0 2px 4px;border-bottom:1px solid var(--line)}
 .item{display:grid;grid-template-columns:10px 1fr auto auto;gap:10px;align-items:center;padding:8px 2px}
@@ -149,36 +165,97 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .del.arm{background:var(--warn);color:var(--card);font-size:12px;font-weight:700;padding:6px 8px}
 .empty-state{border:1.5px dashed var(--line);border-radius:var(--r);padding:18px;color:var(--muted);text-align:center;font-size:14px}
 .foot{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted)}
+#mode{background:var(--note-soft);color:var(--note);border-radius:99px;padding:5px 11px;font-weight:600}
 .ghost{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:9px 14px;font-weight:600;font-size:14px}
+/* wallet: counted cash plus everything since the count; below it, all-time income vs. expenses */
+.wallet{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:grid;gap:6px}
+.ghost.sm{padding:5px 10px;font-size:13px}
+.wal-big{font-size:28px;font-weight:700;line-height:1.15}
+.wal-big small{font-family:var(--f-body);font-size:14px;font-weight:600;color:var(--muted);margin-left:4px}
+.wal-big.neg{color:var(--warn)}
+.wal-big.none{color:var(--line)}
+.wal-sub{font-size:13px;color:var(--muted)}
+.wal-form{display:flex;gap:8px}
+.wal-form .field{flex:1}
+.wal-form .save{padding:10px 16px;font-size:14px}
+.wal-row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.wal-all{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;border-top:1px solid var(--line);padding-top:8px;margin-top:2px}
+.wal-all span{display:grid;font-size:12px;color:var(--muted);min-width:0}
+.wal-all b{font-size:14px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+.wal-all .tot b{font-weight:700}
+/* backup reminder: on the phone above the summary, on desktop in the middle of the header */
+.remind{order:-1;display:flex;align-items:center;justify-content:space-between;gap:12px;background:color-mix(in srgb,var(--warn) 12%,var(--card));color:var(--warn);border:1px solid color-mix(in srgb,var(--warn) 35%,transparent);border-radius:10px;padding:6px 6px 6px 12px;font-size:13px;font-weight:600}
+.remind button{border:0;background:var(--warn);color:var(--card);border-radius:8px;padding:5px 10px;font-weight:700;font-size:13px}
+/* back link to the main site: on the phone a quiet link above the summary (.back-m); on desktop a full-width tile under the entry, with the main site avatar behind it (.back-d) */
+.back{display:inline-flex;align-items:center;gap:8px;padding:4px 2px;color:var(--muted);text-decoration:none;font-weight:600;font-size:14px;border-radius:10px}
+.back:hover{border-color:var(--note)}
+.back:focus-visible{outline:2px solid var(--note);outline-offset:2px}
+.back-m{order:-2;justify-self:start;margin-bottom:-6px}
+.back-d{display:none}
+/* phone order; the left-column parts sit in .side, which only exists as a box on desktop */
+.side{display:contents}
+.entry{order:1}.bulk{order:2}.month{order:3}.wallet{order:4}.hist{order:5}.foot{order:6}
+/* bulk help: a small "?" left of the title whose tooltip holds the instructions; it fades in below the title,
+   or, on screens with a wide margin, to the left of the column */
+.bulk summary{position:relative;justify-content:flex-start}
+.bulk summary h2{flex:0 1 auto;margin-right:auto}
+.help{order:-1;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;border:1.5px solid var(--muted);color:var(--muted);font:700 12px var(--f-body);cursor:help;flex-shrink:0;
+  box-shadow:0 0 0 0 color-mix(in srgb,var(--note) 22%,transparent);
+  transition:color .2s,border-color .2s,background-color .2s,box-shadow .3s cubic-bezier(.3,.7,.2,1)}
+/* no transform here: it would become the tooltip's positioning box */
+.help:hover,.help:focus-visible{border-color:var(--note);color:var(--note);background:var(--note-soft);box-shadow:0 0 0 5px color-mix(in srgb,var(--note) 22%,transparent);outline:none}
+.tip{position:absolute;left:10px;right:10px;top:calc(100% - 6px);z-index:10;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgb(0 0 0/.28);padding:12px 14px;font:500 13px/1.6 var(--f-body);cursor:auto;text-align:left;
+  visibility:hidden;opacity:0;transform:translateY(-6px);pointer-events:none;transition:opacity .2s,transform .2s,visibility 0s .2s}
+.tip{display:grid;gap:3px;justify-items:start}
+.tip-h{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:8px}
+.tip-h:first-child{margin-top:0}
+.help:hover .tip,.help:focus .tip{visibility:visible;opacity:1;transform:none;transition:opacity .2s,transform .25s cubic-bezier(.3,.7,.2,1)}
+@media (min-width:1760px){
+  .tip{left:auto;right:calc(100% + 16px);top:0;width:min(320px,calc((100vw - 1320px)/2));transform:translateX(8px)}
+}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom, 0px));transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--card);padding:10px 16px;border-radius:99px;font-weight:600;font-size:14px;opacity:0;transition:.25s;pointer-events:none;z-index:5;max-width:calc(100% - 32px)}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
-/* desktop: three columns (summary, month, bulk, CSV | entry | history), centered on the page. The history takes the height of the taller other column and scrolls inside. */
+/* desktop: three columns (summary, month, bulk, CSV, wallet | entry | history), centered on the page.
+   Only the entry sets the row height: the history and the left column are size-contained, so the history is exactly
+   as tall as the entry and an opened bulk box just runs further down without moving anything else. */
 @media (min-width:1000px){
   body{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;justify-content:center}
   .wrap{width:100%;max-width:1320px;padding:24px 28px;gap:18px 24px;
     grid-template-columns:minmax(0,1fr) minmax(340px,400px) minmax(0,1fr);
-    grid-template-rows:repeat(5,max-content) 1fr;
-    grid-template-areas:"top top top" "sum entry hist" "month entry hist" "bulk entry hist" "foot entry hist" ". entry hist"}
+    grid-template-areas:"top top top" "side entry hist" ". back ."}
   .top{grid-area:top;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:0 2px 4px}
   .top h1{display:flex;align-items:center;gap:12px;margin:0;font:700 24px var(--f-display);letter-spacing:-.01em}
   .top img{border-radius:9px}
   .top span{color:var(--muted);font-weight:600;font-size:15px}
-  .sum{grid-area:sum}
-  .entry{grid-area:entry;align-self:start;gap:10px;padding:14px}
-  .month{grid-area:month}
-  .bulk{grid-area:bulk}
-  .foot{grid-area:foot}
-  .hist{grid-area:hist;contain:size;min-height:0;grid-template-rows:auto minmax(0,1fr)}
-  .hist .list{overflow:auto;align-content:start;padding-right:6px}
-  .month,.hist{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px}
-  .hist .item:hover{background:var(--paper)}
-  .keys{gap:6px}
+  .side{grid-area:side;display:flex;flex-direction:column;gap:18px;contain:size;min-height:0}
+  .side>*{flex-shrink:0}
+  .sum{order:0}.month{order:1}.bulk{order:2}.foot{order:3}.wallet{order:4}
+  /* the entry never shrinks (min-height set from JS); spare height goes to the keypad */
+  .entry{grid-area:entry;display:flex;flex-direction:column;gap:10px;padding:14px}
+  .keys{flex:1;grid-auto-rows:1fr;gap:6px}
   .keys button{padding:clamp(5px,1.1vh,11px) 0;font-size:18px}
   .amount{min-height:0;padding:0}
   .amount .num,.sign{font-size:clamp(30px,4.5vh,40px)}
   .recent{max-height:29px;overflow:hidden}
+  .back-m{display:none}
+  /* Main is a full-width tile under the entry, so it stays put whatever the side columns do */
+  .back-d{grid-area:back;display:flex;padding:11px 14px;font-size:14px;color:var(--ink);border:1px solid var(--line);
+    background:linear-gradient(90deg,var(--card) 25%,color-mix(in srgb,var(--card) 10%,transparent) 70%),url(main-avatar.jpg) center 38%/cover}
+  /* CSV row: buttons, then the "only on this device" note filling the rest of the row */
+  /* it also takes up spare height (up to a point; beyond that the month card takes it), so the wallet below
+     always ends in line with the entry */
+  .foot{flex-wrap:nowrap;align-items:stretch;gap:8px;flex-grow:100;max-height:64px}
+  .month{flex-grow:1;align-content:start}
+  .measuring .foot,.measuring .month{flex-grow:0}
+  .foot-btns{order:-1;flex-wrap:nowrap}
+  #mode{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;text-wrap:balance;border-radius:10px;line-height:1.3}
+  .remind{grid-area:top;justify-self:center;align-self:center}
+  .hist{grid-area:hist;contain:size;min-height:0;grid-template-rows:auto minmax(0,1fr)}
+  .hist .list{max-height:none;padding-right:6px}
+  .month,.hist{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+  .hist .item:hover{background:var(--paper)}
 }
-@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 @media (max-width:380px){.amount .num,.sign{font-size:36px}.sum-big{font-size:26px}}
 </style>
 </head>
@@ -186,14 +263,6 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 
 <div class="wrap">
   <header class="top"><h1><img src="icon-192.png" alt="" width="32" height="32">Keš treker</h1><span id="today"></span></header>
-
-  <section class="sum" aria-live="polite">
-    <span class="label" id="sumLabel">Ovaj mesec</span>
-    <span class="label" style="text-align:right">Ova nedelja</span>
-    <div class="sum-big num" id="sumMonth">0<small>din</small></div>
-    <div class="sum-side num" id="sumWeek">0<small>din</small></div>
-    <div class="sum-in" id="sumIn" hidden></div>
-  </section>
 
   <section class="entry" id="entry" aria-label="Nova transakcija">
     <div class="editbar" id="editBar" hidden><span id="editTxt">Menjaš trošak</span><button type="button" id="editCancel">Otkaži</button></div>
@@ -227,18 +296,48 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
     <p class="hint" id="hint">Ukucaj iznos. Ostalo nije obavezno.</p>
   </section>
 
+  <a class="back back-d" href="https://jedankomad.github.io/projects/"><span aria-hidden="true">←</span> Main</a>
+
+  <section class="sec hist">
+    <div class="sec-head"><h2>Istorija</h2><span class="label" id="histTotal"></span></div>
+    <div class="list" id="list"></div>
+  </section>
+
+  <!-- on the phone these join the page flow (display:contents); on desktop they are the left column -->
+  <div class="side">
+  <section class="sum" aria-live="polite">
+    <span class="label" id="sumLabel">Ovaj mesec</span>
+    <span class="label" style="text-align:right">Ova nedelja</span>
+    <div class="sum-big num" id="sumMonth">0<small>din</small></div>
+    <div class="sum-side num" id="sumWeek">0<small>din</small></div>
+    <div class="sum-in" id="sumIn" hidden></div>
+  </section>
+
   <details class="bulk" id="bulk">
-    <summary><h2>Unesi prethodne transakcije</h2></summary>
+    <summary><h2>Unesi prethodne transakcije</h2><span class="help" id="bulkHelp" tabindex="0" role="button" aria-label="Uputstvo za unos" aria-describedby="bulkTip">?<span class="tip" id="bulkTip" role="tooltip">
+      <span class="tip-h">Jedna stavka po redu</span>
+      <span>datum, iznos, pa po želji kategorija, <code>@radnja</code> i napomena</span>
+      <span class="tip-h">Primeri</span>
+      <code>3.10.26. 1200 food ručak</code>
+      <code>8.10.26. 4500 hobby @Decathlon, reket</code>
+      <code>10.10.26. +15000 @Mama</code>
+      <code>? 2000 neki trošak</code>
+      <span class="tip-h">Pravila</span>
+      <span>Godina ima 2 cifre.</span>
+      <span>Ako ne znaš datum, umesto njega stavi <code>?</code></span>
+      <span>Za uplatu stavi <code>+</code> ispred iznosa.</span>
+      <span>Bez kategorije trošak ide u Other.</span>
+      <span class="tip-h">Kategorije</span>
+      <span>food, hangouts, apparel, hobby, event, tech, other</span>
+    </span></span></summary>
     <div class="bulk-body">
-      <p>Jedna stavka po redu: datum, iznos, pa po želji kategorija, radnja sa @ i napomena. Na primer <code>3.10. 1200 food ručak</code> ili <code>8.10. 4500 hobby @Decathlon, reket</code>.</p>
-      <p>Ako ne znaš datum, umesto njega stavi <code>?</code>. Za uplatu stavi <code>+</code> ispred iznosa. Bez kategorije trošak ide u Other. Kategorije: food, hangouts, apparel, hobby, event, tech, other.</p>
-      <textarea class="field" id="bulkIn" placeholder="3.10. 1200 food ručak&#10;5.10. 800 hangouts bleja sa drugarima&#10;8.10. 4500 hobby @Decathlon, reket&#10;? 2000 neki trošak&#10;10.10. +15000 @Mama" spellcheck="false" aria-label="Prethodne transakcije, jedna po redu"></textarea>
+      <textarea class="field" id="bulkIn" placeholder="3.10.26. 1200 food ručak&#10;5.10.26. 800 hangouts bleja sa drugarima&#10;8.10.26. 4500 hobby @Decathlon, reket&#10;? 2000 neki trošak&#10;10.10.26. +15000 @Mama" spellcheck="false" aria-label="Prethodne transakcije, jedna po redu"></textarea>
       <div class="preview" id="preview"></div>
       <button class="save" id="bulkSave" type="button" disabled>Upiši</button>
     </div>
   </details>
 
-  <section class="sec month">
+  <section class="sec month" id="month">
     <div class="sec-head">
       <div class="seg" id="breakSeg" role="group" aria-label="Prikaz">
         <button type="button" data-b="cat" aria-pressed="true">Kategorije</button>
@@ -250,9 +349,12 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
     <div class="cats-foot" id="catsFoot"></div>
   </section>
 
-  <section class="sec hist">
-    <div class="sec-head"><h2>Istorija</h2><span class="label" id="histTotal"></span></div>
-    <div class="list" id="list"></div>
+  <section class="wallet" id="wallet" aria-live="polite">
+    <span class="label">U novčaniku</span>
+    <div class="wal-row"><div class="wal-big num" id="walBig"></div><button class="ghost sm" id="countBtn" type="button">Prebroj</button></div>
+    <div class="wal-sub" id="walSub"></div>
+    <div class="wal-form" id="walForm" hidden><input class="field" id="walIn" type="text" inputmode="numeric" maxlength="9" placeholder="Koliko keša sada imaš?" autocomplete="off" aria-label="Koliko keša sada imaš, u dinarima"><button class="save" id="walSave" type="button">Sačuvaj</button><button class="ghost" id="walCancel" type="button" aria-label="Otkaži">×</button></div>
+    <div class="wal-all" id="walAll"></div>
   </section>
 
   <div class="foot">
@@ -260,6 +362,10 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
     <div class="foot-btns"><button class="ghost" id="importBtn" type="button">Uvezi CSV</button><button class="ghost" id="exportBtn" type="button">Izvezi CSV</button></div>
     <input type="file" id="importIn" accept=".csv,text/csv,text/plain" hidden>
   </div>
+  </div>
+
+  <a class="back back-m" href="https://jedankomad.github.io/projects/"><span aria-hidden="true">←</span> Main</a>
+  <div class="remind" id="remind" role="status" hidden><span id="remindTxt"></span><button type="button" id="remindBtn">Izvezi CSV</button></div>
 </div>
 <div class="toast" id="toast" role="status"></div>
 
@@ -397,7 +503,8 @@ function updateEntry(){
     ?(!n?"Ukucaj iznos uplate.":`Uplata +${fmt(n)} din${plTxt}${when}`)
     :(!n?"Ukucaj iznos. Ostalo nije obavezno.":`${fmt(n)} din · ${cat?catOf(cat).name:"Other"}${plTxt}${when}`);
 }
-function resetForm(){amountStr="";$("note").value="";$("place").value="";cat=null;pressChips();setDateOffset(0);setType("out");}
+// keeps Trošak/Uplata as it is, so several incomes in a row don't need switching back each time
+function resetForm(){amountStr="";$("note").value="";$("place").value="";cat=null;pressChips();setDateOffset(0);setType(txType);}
 async function save(){
   const n=parseInt(amountStr||"0",10); if(!(n>0))return;
   if(editId){ await saveEdit(n); return; }
@@ -445,13 +552,15 @@ const INCOME_WORDS=["uplata","uplate","prihod","priliv"];
 function matchCat(w){const f=fold(w);if(CAT_ALIASES[f])return CAT_ALIASES[f];
   const hit=CATS.find(c=>f.length>=2&&c.id.startsWith(f));return hit?hit.id:null}
 function parseLine(line){
-  const m=line.trim().match(/^(?:(\?)|(\d{1,2})[.\/-](\d{1,2})(?:[.\/-](\d{2,4}))?\.?)\s+(\+)?\s*([\d.,]+)\s*(?:din|rsd)?\.?(?:\s+(.*))?$/i);
+  const m=line.trim().match(/^(?:(\?)|(\d{1,2})[.\/-](\d{1,2})(?:[.\/-](\d+))?\.?)\s+(\+)?\s*([\d.,]+)\s*(?:din|rsd)?\.?(?:\s+(.*))?$/i);
   if(!m)return {err:"Ne razumem red. Format je: datum iznos kategorija napomena"};
   let [,q,d,mo,y,plus,amt,rest]=m;
   let ts,nd=false;
   if(q){ts=Date.now();nd=true}
   else{d=+d;mo=+mo;const now=new Date();
-    if(!y){y=now.getFullYear(); if(new Date(y,mo-1,d)>now)y--;} else {y=+y;if(y<100)y+=2000}
+    if(!y)return {err:"Fali godina. Piši npr. 3.10.26."};
+    if(y.length!==2)return {err:"Godina ima 2 cifre, npr. 3.10.26."};
+    y=2000+(+y);
     const dt=new Date(y,mo-1,d,12,0,0);
     if(dt.getMonth()!==mo-1||dt.getDate()!==d)return {err:"Datum ne postoji"};
     if(dt>now)return {err:"Datum je u budućnosti"};
@@ -491,11 +600,12 @@ $("bulkSave").onclick=async()=>{
 };
 
 /* ---- render ---- */
-$("mPrev").onclick=()=>{viewM--;if(viewM<0){viewM=11;viewY--}render()};
-$("mNext").onclick=()=>{viewM++;if(viewM>11){viewM=0;viewY++}render()};
+let animCats=false; // animate the month rows on the next render (view changed, not just data)
+$("mPrev").onclick=()=>{viewM--;if(viewM<0){viewM=11;viewY--}animCats=true;render()};
+$("mNext").onclick=()=>{viewM++;if(viewM>11){viewM=0;viewY++}animCats=true;render()};
 let breakBy="cat";
-$("breakSeg").addEventListener("click",ev=>{const b=ev.target.closest("button");if(!b)return;breakBy=b.dataset.b;
-  $("breakSeg").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));render()});
+$("breakSeg").addEventListener("click",ev=>{const b=ev.target.closest("button");if(!b||b.dataset.b===breakBy)return;breakBy=b.dataset.b;
+  $("breakSeg").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));animCats=true;render()});
 function render(){
   renderPlaces();
   const now=new Date();
@@ -519,15 +629,16 @@ function render(){
     rows=[...by.values()];}
   rows.sort((a,b)=>b.v-a.v);if(rows.length>8){const rest=rows.splice(7);rows.push({name:"Ostala mesta",v:sum(rest.map(r=>({amount:r.v}))),color:"var(--c-other)"})}
   const max=Math.max(1,...rows.map(r=>r.v));
-  $("cats").innerHTML=rows.length?rows.map(r=>`<div class="cat-row" style="--c:${r.color}"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.name)}</span><span class="track"><i style="width:${r.v/max*100}%"></i></span><span class="v">${fmt(r.v)} din</span></div>`).join("")+`<div class="cat-row"><span class="label">Ukupno</span><span></span><span class="v">${fmt(total)} din</span></div>`
+  $("cats").innerHTML=rows.length?rows.map((r,i)=>`<div class="cat-row" style="--c:${r.color};--i:${i}"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.name)}</span><span class="track"><i style="width:${r.v/max*100}%"></i></span><span class="v">${fmt(r.v)} din</span></div>`).join("")+`<div class="cat-row" style="--i:${rows.length}"><span class="label">Ukupno</span><span></span><span class="v">${fmt(total)} din</span></div>`
     :`<div class="empty-state">Za ${MONTHS_FULL[viewM]} nema keš troškova.</div>`;
+  if(animCats){const c=$("cats");c.classList.remove("anim");void c.offsetWidth;c.classList.add("anim");animCats=false}
   const vIn=sum(datedIn.filter(e=>e.ts>=vs&&e.ts<ve)),und=sum(exps.filter(e=>e.noDate&&!isIn(e)));
   $("catsFoot").innerHTML=[vIn?`<span>Uplate u ovom mesecu: <b>+${fmt(vIn)} din</b></span>`:"",und?`<span>Troškovi bez datuma: ${fmt(und)} din (ne ulaze ni u jedan mesec)</span>`:""].join("");
 
-  updateFoot();
+  updateFoot();renderWallet();
   // history: undated first, then by day
-  $("histTotal").textContent=exps.length?`${exps.length} ${plural(exps.length,"upis","upisa","upisa")} · tapni za izmenu`:"";
-  if(!exps.length){$("list").innerHTML=`<div class="empty-state">Ovde će stajati svaki trošak i uplata, grupisani po danima. Probaj: ukucaj 250 i upiši. Za starije stavke otvori „Unesi prethodne transakcije“.</div>`;return}
+  $("histTotal").textContent=exps.length?`${exps.length} ${plural(exps.length,"upis","upisa","upisa")}`:"";
+  if(!exps.length){$("list").innerHTML=`<div class="empty-state">Još nema upisa.</div>`;return}
   const groups=[];
   const undated=exps.filter(e=>e.noDate).sort((a,b)=>b.ts-a.ts);
   if(undated.length)groups.push({k:"nodate",name:"Bez datuma",items:undated});
@@ -553,6 +664,34 @@ $("list").addEventListener("click",ev=>{const b=ev.target.closest(".del");
   if(b.classList.contains("arm")){if(b.dataset.id===editId)cancelEdit();delExp(b.dataset.id);return}
   document.querySelectorAll(".del.arm").forEach(x=>{x.classList.remove("arm");x.textContent="×"});
   b.classList.add("arm");b.textContent="Obriši?";setTimeout(()=>{if(b.isConnected){b.classList.remove("arm");b.textContent="×"}},3000);});
+
+/* ---- wallet ---- */
+// counted cash is kept apart from the transactions, under its own key: {amount, ts}
+function walGet(){try{const v=JSON.parse(localStorage.getItem("kes-wallet")||"null");if(v&&v.amount>=0&&v.ts)return v}catch(e){}return null}
+function walSet(v){try{localStorage.setItem("kes-wallet",JSON.stringify(v))}catch(e){}}
+const signed=n=>(n<0?"−":n>0?"+":"")+fmt(n);
+function renderWallet(){
+  const allIn=sum(exps.filter(isIn)),allOut=sum(exps.filter(e=>!isIn(e)));
+  $("walAll").innerHTML=`<span>Sve uplate<b>${signed(allIn)} din</b></span><span>Svi troškovi<b>${signed(-allOut)} din</b></span><span class="tot">Razlika<b>${signed(allIn-allOut)} din</b></span>`;
+  const w=walGet();
+  if(!w){$("walBig").className="wal-big num none";$("walBig").innerHTML="—";
+    $("walSub").textContent="Prebroj keš koji sada imaš. Od tada se troškovi oduzimaju, a uplate dodaju.";return}
+  // only what happened after the count changes it; older entries were already out of the wallet
+  const after=exps.filter(e=>!e.noDate&&e.ts>w.ts),o=sum(after.filter(e=>!isIn(e))),i=sum(after.filter(isIn)),bal=w.amount+i-o;
+  $("walBig").className="wal-big num"+(bal<0?" neg":"");
+  $("walBig").innerHTML=`${bal<0?"−":""}${fmt(bal)}<small>din</small>`;
+  const d=new Date(w.ts),since=[o?`−${fmt(o)}`:"",i?`+${fmt(i)}`:""].filter(Boolean).join(" ");
+  // always two lines, so the card keeps its height
+  $("walSub").innerHTML=`Prebrojano ${d.getDate()}. ${MONTHS[d.getMonth()]} ${d.getFullYear()}. u ${pad(d.getHours())}:${pad(d.getMinutes())} · ${fmt(w.amount)} din<br>${since?`Od tada ${since}`:"Od tada bez promena"}`;
+}
+function walOpen(on){$("walForm").hidden=!on;$("countBtn").hidden=on;if(on){$("walIn").value="";$("walIn").focus()}}
+function walSave(){const v=$("walIn").value.replace(/[^\d]/g,"");if(v===""){$("walIn").focus();return}
+  walSet({amount:parseInt(v,10),ts:Date.now()});walOpen(false);renderWallet();toast("Stanje novčanika upisano")}
+$("countBtn").onclick=()=>walOpen(true);
+$("walCancel").onclick=()=>walOpen(false);
+$("walSave").onclick=walSave;
+$("walIn").addEventListener("keydown",ev=>{if(ev.key==="Enter")walSave();else if(ev.key==="Escape")walOpen(false)});
+$("remindBtn").onclick=()=>$("exportBtn").click();
 
 /* ---- export ---- */
 $("exportBtn").onclick=async()=>{
@@ -582,6 +721,9 @@ function updateFoot(){
   $("mode").textContent=!exps.length?"Podaci su samo na ovom uređaju"
     :t?`Samo na ovom uređaju · rezervna kopija ${days===0?"danas":`pre ${days} ${plural(days,"dan","dana","dana")}`}`
     :"Samo na ovom uređaju · još nema rezervne kopije";
+  const stale=exps.length>0&&(!t||days>=30);
+  $("remind").hidden=!stale;
+  if(stale)$("remindTxt").textContent=t?`Rezervna kopija je stara ${days} ${plural(days,"dan","dana","dana")}`:"Još nema rezervne kopije";
 }
 
 /* ---- import ---- */
@@ -629,6 +771,66 @@ $("importIn").addEventListener("change",async()=>{const f=$("importIn").files[0]
 let tt;function toast(m){const t=$("toast");t.textContent=m;t.classList.add("on");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("on"),2200)}
 
 $("today").textContent=new Date().toLocaleDateString("sr-Latn",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+// the "?" shows its tooltip on hover/focus; clicking it must not open or close the bulk box
+$("bulkHelp").addEventListener("click",ev=>ev.preventDefault());
+$("bulkHelp").addEventListener("keydown",ev=>{if(ev.key==="Enter"||ev.key===" ")ev.preventDefault()});
+
+// desktop: the entry keeps the largest height it has had, and is at least as tall as the left column was at load
+// (or after a window resize), so switching Trošak/Uplata, Kategorije/Radnje or opening things never makes the page jump
+const wide=matchMedia("(min-width:1000px)"),entryEl=$("entry"),sideEl=document.querySelector(".side");
+let entryMin=0,sideBase=0;
+function holdEntry(){
+  if(!wide.matches){entryMin=0;entryEl.style.minHeight="";return}
+  const h=Math.max(entryEl.offsetHeight,sideBase);
+  if(h>entryMin){entryMin=h;entryEl.style.minHeight=h+"px"}
+}
+// the left column is measured as if the month view were as long as it gets (8 rows + total, both note lines),
+// so no month or Kategorije/Radnje switch can push it past the entry; shorter views leave the slack to the CSV row
+function sideNatural(){
+  sideEl.classList.add("measuring"); // CSV row at its natural height
+  let h=[...sideEl.children].reduce((a,c)=>a+c.offsetHeight,0)+18*(sideEl.children.length-1);
+  const cats=$("cats"),row=cats.querySelector(".cat-row"),step=(row?row.offsetHeight:20)+8;
+  h+=Math.max(0,9*step-8-cats.offsetHeight);
+  const notes=$("catsFoot").children.length;h+=(2-notes)*19+(notes?0:10)+6; // +6: a little room for rounding
+  sideEl.classList.remove("measuring");
+  return h;
+}
+function measureSide(){entryMin=0;entryEl.style.minHeight="";
+  // with the bulk box or the wallet form open the column is taller than usual, so keep the last measurement
+  if(!wide.matches)sideBase=0;
+  else if(!$("bulk").open&&$("walForm").hidden)sideBase=sideNatural();
+  holdEntry()}
+if("ResizeObserver" in window)new ResizeObserver(holdEntry).observe(entryEl);
+addEventListener("resize",measureSide);
+(document.fonts?document.fonts.ready:Promise.resolve()).then(measureSide);
+
+// segmented controls: a pill slides to whichever button is pressed
+const reduceMotion=matchMedia("(prefers-reduced-motion: reduce)");
+function slideSeg(seg){const b=seg.querySelector('[aria-pressed="true"]');
+  seg.style.setProperty("--x",b?b.offsetLeft+"px":"0px");seg.style.setProperty("--w",b?b.offsetWidth+"px":"0px")}
+document.querySelectorAll(".seg").forEach(seg=>{
+  new MutationObserver(()=>slideSeg(seg)).observe(seg,{subtree:true,attributeFilter:["aria-pressed"]});
+  if("ResizeObserver" in window)new ResizeObserver(()=>slideSeg(seg)).observe(seg);
+  slideSeg(seg);requestAnimationFrame(()=>seg.classList.add("ready"));
+});
+
+// bulk box: open and close with a height animation instead of a jump
+$("bulk").querySelector("summary").addEventListener("click",ev=>{
+  if(ev.defaultPrevented)return; // the "?" handles its own clicks
+  ev.preventDefault();
+  const det=$("bulk"),body=det.querySelector(".bulk-body");
+  if(det.dataset.anim)return;
+  const done=()=>{delete det.dataset.anim;body.style.overflow=""};
+  if(reduceMotion.matches){det.open=!det.open;return}
+  det.dataset.anim="1";body.style.overflow="hidden";
+  // the state change runs on a timer, so the box can never get stuck if an animation does not finish
+  if(!det.open){det.open=true;const h=body.scrollHeight;
+    body.animate([{height:"0px",opacity:0},{height:h+"px",opacity:1}],{duration:280,easing:"cubic-bezier(.3,.7,.2,1)"});setTimeout(done,290)}
+  else{const h=body.offsetHeight;
+    body.animate([{height:h+"px",opacity:1},{height:"0px",opacity:0}],{duration:220,easing:"ease-in",fill:"forwards"}).finished.catch(()=>{});
+    setTimeout(()=>{det.open=false;body.getAnimations().forEach(a=>a.cancel());done()},230)}
+});
+
 setDateOffset(0);setType("out");render();connect();
 if("serviceWorker" in navigator) addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
 </script>

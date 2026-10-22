@@ -1,7 +1,7 @@
 // Keš treker: keeps the app working offline.
 // Bump VERSION whenever you change index.html so phones pick up the new version.
-const VERSION = "kes-6";
-const ASSETS = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
+const VERSION = "kes-8";
+const ASSETS = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "apple-touch-icon.png", "main-avatar.jpg"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
