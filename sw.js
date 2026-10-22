@@ -1,6 +1,6 @@
-// Keš novčanik: keeps the app working offline.
+// Keš treker: keeps the app working offline.
 // Bump VERSION whenever you change index.html so phones pick up the new version.
-const VERSION = "kes-5";
+const VERSION = "kes-6";
 const ASSETS = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
 
 self.addEventListener("install", e => {

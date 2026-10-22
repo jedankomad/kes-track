@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Keš novčanik</title>
+<title>Keš treker</title>
 <meta name="theme-color" content="#1f6b52">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Manrope:wght@400;500;600;700&display=swap">
 <style>
-/* Layout: one narrow phone column — month summary band, fast entry pad, category split, history. Banknote-green ink on cool paper. */
+/* Layout: one narrow phone column — month summary band, fast entry pad, category split, history. On wide screens: three columns (summary, month, bulk, CSV | entry | history), centered on the page. Banknote-green ink on cool paper. */
 :root{
   --paper:#f3f5f1; --card:#ffffff; --ink:#15231d; --muted:#5e6f66; --line:#dbe3dd;
   --note:#1f6b52; --note-soft:#e1efe8; --warn:#b4471f;
@@ -40,6 +40,7 @@ body{margin:0;-webkit-text-size-adjust:100%}
 [hidden]{display:none!important}
 .field{font-size:16px}
 .foot-btns{display:flex;gap:8px;flex-wrap:wrap}
+.top{display:none}
 body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45}
 .wrap{max-width:480px;margin:0 auto;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:18px 40px;display:grid;gap:18px}
 .label{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700}
@@ -151,6 +152,32 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .ghost{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:9px 14px;font-weight:600;font-size:14px}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom, 0px));transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--card);padding:10px 16px;border-radius:99px;font-weight:600;font-size:14px;opacity:0;transition:.25s;pointer-events:none;z-index:5;max-width:calc(100% - 32px)}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+/* desktop: three columns (summary, month, bulk, CSV | entry | history), centered on the page. The history takes the height of the taller other column and scrolls inside. */
+@media (min-width:1000px){
+  body{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;justify-content:center}
+  .wrap{width:100%;max-width:1320px;padding:24px 28px;gap:18px 24px;
+    grid-template-columns:minmax(0,1fr) minmax(340px,400px) minmax(0,1fr);
+    grid-template-rows:repeat(5,max-content) 1fr;
+    grid-template-areas:"top top top" "sum entry hist" "month entry hist" "bulk entry hist" "foot entry hist" ". entry hist"}
+  .top{grid-area:top;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:0 2px 4px}
+  .top h1{display:flex;align-items:center;gap:12px;margin:0;font:700 24px var(--f-display);letter-spacing:-.01em}
+  .top img{border-radius:9px}
+  .top span{color:var(--muted);font-weight:600;font-size:15px}
+  .sum{grid-area:sum}
+  .entry{grid-area:entry;align-self:start;gap:10px;padding:14px}
+  .month{grid-area:month}
+  .bulk{grid-area:bulk}
+  .foot{grid-area:foot}
+  .hist{grid-area:hist;contain:size;min-height:0;grid-template-rows:auto minmax(0,1fr)}
+  .hist .list{overflow:auto;align-content:start;padding-right:6px}
+  .month,.hist{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+  .hist .item:hover{background:var(--paper)}
+  .keys{gap:6px}
+  .keys button{padding:clamp(5px,1.1vh,11px) 0;font-size:18px}
+  .amount{min-height:0;padding:0}
+  .amount .num,.sign{font-size:clamp(30px,4.5vh,40px)}
+  .recent{max-height:29px;overflow:hidden}
+}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 @media (max-width:380px){.amount .num,.sign{font-size:36px}.sum-big{font-size:26px}}
 </style>
@@ -158,6 +185,8 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 <body>
 
 <div class="wrap">
+  <header class="top"><h1><img src="icon-192.png" alt="" width="32" height="32">Keš treker</h1><span id="today"></span></header>
+
   <section class="sum" aria-live="polite">
     <span class="label" id="sumLabel">Ovaj mesec</span>
     <span class="label" style="text-align:right">Ova nedelja</span>
@@ -209,7 +238,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
     </div>
   </details>
 
-  <section class="sec">
+  <section class="sec month">
     <div class="sec-head">
       <div class="seg" id="breakSeg" role="group" aria-label="Prikaz">
         <button type="button" data-b="cat" aria-pressed="true">Kategorije</button>
@@ -221,7 +250,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
     <div class="cats-foot" id="catsFoot"></div>
   </section>
 
-  <section class="sec">
+  <section class="sec hist">
     <div class="sec-head"><h2>Istorija</h2><span class="label" id="histTotal"></span></div>
     <div class="list" id="list"></div>
   </section>
@@ -574,7 +603,7 @@ function importCSV(text){
   const rows=parseCSV(text);if(rows.length<2){toast("Fajl je prazan.");return}
   const h=rows[0].map(x=>fold(x.trim()));const ix=n=>h.findIndex(x=>x.startsWith(n));
   const iD=ix("datum"),iV=ix("vreme"),iT=ix("tip"),iA=ix("iznos"),iK=ix("kategorija"),iR=ix("radnja"),iN=ix("napomena");
-  if(iA<0){toast("Ovo nije CSV iz Keš novčanika.");return}
+  if(iA<0){toast("Ovo nije CSV iz Keš trekera.");return}
   const byName={...OLD_CATS};CATS.forEach(c=>{byName[fold(c.name)]=c.id;byName[c.id]=c.id});
   const seen=new Set(exps.map(sig));const add=[];let dup=0,bad=0;
   for(const r of rows.slice(1)){
@@ -599,6 +628,7 @@ $("importIn").addEventListener("change",async()=>{const f=$("importIn").files[0]
 
 let tt;function toast(m){const t=$("toast");t.textContent=m;t.classList.add("on");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("on"),2200)}
 
+$("today").textContent=new Date().toLocaleDateString("sr-Latn",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
 setDateOffset(0);setType("out");render();connect();
 if("serviceWorker" in navigator) addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
 </script>
