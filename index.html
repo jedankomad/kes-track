@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Keš novčanik</title>
+<meta name="theme-color" content="#1f6b52">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Keš">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Manrope:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one narrow phone column — month summary band, fast entry pad, category split, history. Banknote-green ink on cool paper. */
+:root{
+  --paper:#f3f5f1; --card:#ffffff; --ink:#15231d; --muted:#5e6f66; --line:#dbe3dd;
+  --note:#1f6b52; --note-soft:#e1efe8; --warn:#b4471f;
+  --c-hrana:#2f7d5b; --c-izlasci:#b0672a; --c-fashion:#b3366f; --c-hobby:#2c6a99; --c-event:#7a4f93; --c-tech:#0b8aa0; --c-ostalo:#6b7570;
+  --f-display:"Unbounded", "Arial Black", system-ui, sans-serif;
+  --f-body:"Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#0f1613; --card:#17211c; --ink:#e6eee9; --muted:#97a89f; --line:#2a3832;
+  --note:#5fc39a; --note-soft:#1c3329; --warn:#ef8a5e;
+  --c-hrana:#5fc39a; --c-izlasci:#e0a066; --c-fashion:#e57fa9; --c-hobby:#6fb0e0; --c-event:#bb92d6; --c-tech:#52c8dc; --c-ostalo:#a3aea8;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#0f1613; --card:#17211c; --ink:#e6eee9; --muted:#97a89f; --line:#2a3832;
+  --note:#5fc39a; --note-soft:#1c3329; --warn:#ef8a5e;
+  --c-hrana:#5fc39a; --c-izlasci:#e0a066; --c-fashion:#e57fa9; --c-hobby:#6fb0e0; --c-event:#bb92d6; --c-tech:#52c8dc; --c-ostalo:#a3aea8;
+  color-scheme:dark}
+*{box-sizing:border-box}
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;-webkit-text-size-adjust:100%}
+[hidden]{display:none!important}
+.field{font-size:16px}
+.foot-btns{display:flex;gap:8px;flex-wrap:wrap}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45}
+.wrap{max-width:480px;margin:0 auto;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:18px 40px;display:grid;gap:18px}
+.label{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700}
+h2{font-family:var(--f-display);font-size:15px;font-weight:500;margin:0;text-wrap:balance}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--note);outline-offset:2px}
+.num{font-family:var(--f-display);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+
+/* summary band */
+.sum{background:var(--note);color:var(--paper);border-radius:var(--r);padding:16px 18px;display:grid;grid-template-columns:1fr auto;gap:4px 16px;align-items:end;position:relative;overflow:hidden}
+.sum::after{content:"";position:absolute;right:-30px;top:-30px;width:120px;height:120px;border:14px solid currentColor;border-radius:50%;opacity:.08}
+.sum .label{color:inherit;opacity:.75}
+.sum-big{font-size:30px;font-weight:700;line-height:1.1}
+.sum-big small,.sum-side small{font-family:var(--f-body);font-size:14px;font-weight:600;opacity:.8;margin-left:4px}
+.sum-side{text-align:right;font-size:17px;font-weight:700}
+
+/* entry */
+.entry{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:grid;gap:14px}
+.amount{display:flex;align-items:baseline;justify-content:center;gap:6px;padding:4px 0 2px;min-height:58px}
+.amount .num{font-size:42px;font-weight:700}
+.amount .cur{font-weight:700;color:var(--muted)}
+.amount.empty .num{color:var(--line)}
+.keys{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.keys button{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 0;font:600 20px var(--f-display);transition:transform .08s}
+.keys button:active{transform:scale(.95)}
+.keys .soft{font-family:var(--f-body);font-size:15px;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--card);border-radius:99px;padding:7px 13px;font-weight:600;font-size:14px}
+.chip .dot{width:9px;height:9px;border-radius:50%;background:var(--c)}
+.chip[aria-pressed="true"]{background:var(--c);border-color:var(--c);color:var(--card)}
+.chip[aria-pressed="true"] .dot{background:var(--card)}
+.field{width:100%;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--paper);color:var(--ink);font:inherit}
+.placebox{display:grid;gap:8px}
+.recent{display:flex;gap:6px;flex-wrap:wrap}
+.recent:empty{display:none}
+.pchip{border:1px solid var(--line);background:var(--paper);border-radius:99px;padding:4px 10px;font-size:13px;font-weight:600;color:var(--muted)}
+.pchip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--card)}
+.pin{display:inline-block;width:8px;height:8px;border:2px solid currentColor;border-radius:50% 50% 50% 0;transform:rotate(-45deg);margin-right:5px;vertical-align:1px;opacity:.7}
+.sum-in{grid-column:1/-1;font-size:13px;font-weight:600;opacity:.9;margin-top:4px}
+.seg-wide{width:100%}
+.seg-wide button{flex:1;padding:10px}
+.sign{font:700 42px var(--f-display);color:var(--note)}
+.entry.income .amount .num{color:var(--note)}
+.entry.income .amount.empty .num{color:var(--line)}
+.daterow .field:disabled{opacity:.4}
+.item .a.in{color:var(--note)}
+.cats-foot{display:grid;gap:2px;font-size:13px;color:var(--muted)}
+.cats-foot:empty{display:none}
+.cats-foot b{color:var(--note)}
+.editbar{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--note-soft);color:var(--note);border-radius:10px;padding:8px 12px;font-weight:600;font-size:14px}
+.editbar button{border:0;background:none;color:inherit;font-weight:700;text-decoration:underline;padding:2px 4px}
+.entry.editing{border-color:var(--note);box-shadow:0 0 0 1px var(--note)}
+.item{cursor:pointer;border-radius:10px;padding-inline:6px!important}
+.item:hover{background:var(--card)}
+.item.sel{background:var(--note-soft)}
+.item:focus-visible{outline:2px solid var(--note);outline-offset:1px}
+.daterow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.daterow .field{flex:1 1 150px;width:auto}
+.seg{display:flex;border:1px solid var(--line);border-radius:12px;overflow:hidden;flex-shrink:0}
+.seg button{border:0;background:none;padding:9px 11px;font-size:13px;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--card)}
+.save{border:0;border-radius:12px;background:var(--ink);color:var(--card);padding:14px;font-weight:700;font-size:16px}
+.save:disabled{opacity:.35;cursor:default}
+.hint{font-size:13px;color:var(--muted);text-align:center;min-height:1.3em;margin:-6px 0 0}
+
+/* bulk */
+.bulk{background:var(--card);border:1px solid var(--line);border-radius:var(--r)}
+.bulk summary{padding:14px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;list-style:none}
+.bulk summary::-webkit-details-marker{display:none}
+.bulk summary::after{content:"+";font:600 20px var(--f-display);color:var(--muted)}
+.bulk[open] summary::after{content:"–"}
+.bulk-body{padding:0 16px 16px;display:grid;gap:12px}
+.bulk-body p{margin:0;font-size:14px;color:var(--muted)}
+.bulk-body code{font-size:13px;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:1px 5px;color:var(--ink)}
+.bulk textarea{min-height:130px;resize:vertical;font-family:ui-monospace, "SF Mono", Menlo, Consolas, monospace;font-size:14px;line-height:1.5}
+.preview{display:grid;gap:4px;font-size:14px;max-height:260px;overflow:auto}
+.pv{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:6px 8px;border-radius:8px;background:var(--paper)}
+.pv .dot{width:9px;height:9px;border-radius:50%;background:var(--c)}
+.pv.bad{grid-template-columns:1fr;background:none;border:1px dashed var(--warn);color:var(--warn)}
+.pv small{color:var(--muted)}
+.pv .a{font-weight:700;font-variant-numeric:tabular-nums}
+
+/* sections */
+.sec{display:grid;gap:10px}
+.sec-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.cats{display:grid;gap:8px}
+.cat-row{display:grid;grid-template-columns:minmax(0,110px) 1fr auto;gap:10px;align-items:center;font-size:14px}
+.cat-row .track{height:10px;background:var(--line);border-radius:99px;overflow:hidden}
+.cat-row .track i{display:block;height:100%;background:var(--c);border-radius:99px}
+.cat-row .v{font-variant-numeric:tabular-nums;font-weight:600;min-width:72px;text-align:right}
+.mnav{display:flex;align-items:center;gap:6px}
+.mnav button{border:1px solid var(--line);background:var(--card);border-radius:8px;width:30px;height:30px;font-weight:700}
+.mnav button:disabled{opacity:.35;cursor:default}
+.mnav span{font-weight:600;font-size:14px;min-width:110px;text-align:center}
+
+.list{display:grid;gap:14px}
+.dgroup{display:grid;gap:2px}
+.dgroup-h{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);font-weight:600;padding:0 2px 4px;border-bottom:1px solid var(--line)}
+.item{display:grid;grid-template-columns:10px 1fr auto auto;gap:10px;align-items:center;padding:8px 2px}
+.item .dot{width:10px;height:10px;border-radius:50%;background:var(--c)}
+.item .t{min-width:0}
+.item .t div{font-weight:600}
+.item .t small{color:var(--muted);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .a{font-weight:700;font-variant-numeric:tabular-nums}
+.del{border:0;background:none;color:var(--muted);font-size:18px;line-height:1;padding:4px 6px;border-radius:8px}
+.del.arm{background:var(--warn);color:var(--card);font-size:12px;font-weight:700;padding:6px 8px}
+.empty-state{border:1.5px dashed var(--line);border-radius:var(--r);padding:18px;color:var(--muted);text-align:center;font-size:14px}
+.foot{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted)}
+.ghost{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:9px 14px;font-weight:600;font-size:14px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom, 0px));transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--card);padding:10px 16px;border-radius:99px;font-weight:600;font-size:14px;opacity:0;transition:.25s;pointer-events:none;z-index:5;max-width:calc(100% - 32px)}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+@media (max-width:380px){.amount .num,.sign{font-size:36px}.sum-big{font-size:26px}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <section class="sum" aria-live="polite">
+    <span class="label" id="sumLabel">Ovaj mesec</span>
+    <span class="label" style="text-align:right">Ova nedelja</span>
+    <div class="sum-big num" id="sumMonth">0<small>din</small></div>
+    <div class="sum-side num" id="sumWeek">0<small>din</small></div>
+    <div class="sum-in" id="sumIn" hidden></div>
+  </section>
+
+  <section class="entry" id="entry" aria-label="Nova transakcija">
+    <div class="editbar" id="editBar" hidden><span id="editTxt">Menjaš trošak</span><button type="button" id="editCancel">Otkaži</button></div>
+    <div class="seg seg-wide" id="typeSeg" role="group" aria-label="Vrsta">
+      <button type="button" data-t="out" aria-pressed="true">Trošak</button>
+      <button type="button" data-t="in" aria-pressed="false">Uplata</button>
+    </div>
+    <div class="amount empty" id="amountBox"><span class="sign" id="sign"></span><span class="num" id="amount">0</span><span class="cur">din</span></div>
+    <div class="keys" id="keys">
+      <button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button>
+      <button type="button" data-k="4">4</button><button type="button" data-k="5">5</button><button type="button" data-k="6">6</button>
+      <button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button>
+      <button type="button" data-k="00">00</button><button type="button" data-k="0">0</button><button type="button" class="soft" data-k="back" aria-label="Obriši cifru">⌫</button>
+    </div>
+    <div class="chips" id="chips" role="group" aria-label="Kategorija"></div>
+    <div class="placebox">
+      <input class="field" id="place" type="text" maxlength="40" list="placeList" placeholder="Radnja ili mesto (nije obavezno)" autocomplete="off" aria-label="Radnja ili mesto">
+      <datalist id="placeList"></datalist>
+      <div class="recent" id="recent" role="group" aria-label="Skorašnja mesta"></div>
+    </div>
+    <div class="daterow">
+      <div class="seg" id="dateSeg" role="group" aria-label="Dan">
+        <button type="button" data-d="0" aria-pressed="true">Danas</button>
+        <button type="button" data-d="1" aria-pressed="false">Juče</button>
+        <button type="button" data-d="x" aria-pressed="false">Ne znam</button>
+      </div>
+      <input class="field" id="date" type="date" aria-label="Datum">
+    </div>
+    <input class="field" id="note" type="text" maxlength="60" placeholder="Napomena (nije obavezno)" autocomplete="off">
+    <button class="save" id="save" type="button" disabled>Upiši trošak</button>
+    <p class="hint" id="hint">Ukucaj iznos. Ostalo nije obavezno.</p>
+  </section>
+
+  <details class="bulk" id="bulk">
+    <summary><h2>Unesi prethodne transakcije</h2></summary>
+    <div class="bulk-body">
+      <p>Jedna stavka po redu: datum, iznos, pa po želji kategorija, radnja sa @ i napomena. Na primer <code>3.10. 1200 hrana ručak</code> ili <code>8.10. 4500 hobby @Decathlon, reket</code>.</p>
+      <p>Ako ne znaš datum, umesto njega stavi <code>?</code>. Za uplatu stavi <code>+</code> ispred iznosa. Bez kategorije trošak ide u Other. Kategorije: hrana, izlasci, fashion, hobby, event, tech, other.</p>
+      <textarea class="field" id="bulkIn" placeholder="3.10. 1200 hrana ručak&#10;5.10. 800 izlasci bleja sa drugarima&#10;8.10. 4500 hobby @Decathlon, reket&#10;? 2000 neki trošak&#10;10.10. +15000 @Mama" spellcheck="false" aria-label="Prethodne transakcije, jedna po redu"></textarea>
+      <div class="preview" id="preview"></div>
+      <button class="save" id="bulkSave" type="button" disabled>Upiši</button>
+    </div>
+  </details>
+
+  <section class="sec">
+    <div class="sec-head">
+      <div class="seg" id="breakSeg" role="group" aria-label="Prikaz">
+        <button type="button" data-b="cat" aria-pressed="true">Kategorije</button>
+        <button type="button" data-b="place" aria-pressed="false">Radnje</button>
+      </div>
+      <div class="mnav"><button type="button" id="mPrev" aria-label="Prethodni mesec">‹</button><span id="mName"></span><button type="button" id="mNext" aria-label="Sledeći mesec">›</button></div>
+    </div>
+    <div class="cats" id="cats"></div>
+    <div class="cats-foot" id="catsFoot"></div>
+  </section>
+
+  <section class="sec">
+    <div class="sec-head"><h2>Istorija</h2><span class="label" id="histTotal"></span></div>
+    <div class="list" id="list"></div>
+  </section>
+
+  <div class="foot">
+    <span id="mode">Podaci su samo na ovom uređaju</span>
+    <div class="foot-btns"><button class="ghost" id="importBtn" type="button">Uvezi CSV</button><button class="ghost" id="exportBtn" type="button">Izvezi CSV</button></div>
+    <input type="file" id="importIn" accept=".csv,text/csv,text/plain" hidden>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const CATS=[
+  {id:"hrana",name:"Hrana"},
+  {id:"izlasci",name:"Izlasci"},
+  {id:"fashion",name:"Fashion"},
+  {id:"hobby",name:"Hobby"},
+  {id:"event",name:"Event"},
+  {id:"tech",name:"Tech"},
+  {id:"ostalo",name:"Other"}
+];
+const OTHER=CATS[CATS.length-1];
+const catById=Object.fromEntries(CATS.map(c=>[c.id,c]));
+const catOf=id=>catById[id]||OTHER;
+const $=id=>document.getElementById(id);
+const fmt=n=>String(Math.round(Math.abs(n))).replace(/\B(?=(\d{3})+(?!\d))/g,".");
+const DAYS=["ned","pon","uto","sre","čet","pet","sub"];
+const MONTHS=["jan","feb","mar","apr","maj","jun","jul","avg","sep","okt","nov","dec"];
+const MONTHS_FULL=["januar","februar","mart","april","maj","jun","jul","avgust","septembar","oktobar","novembar","decembar"];
+const pad=n=>String(n).padStart(2,"0");
+const dayKey=d=>{const x=new Date(d);return x.getFullYear()+"-"+pad(x.getMonth()+1)+"-"+pad(x.getDate())};
+const startOfDay=d=>{const x=new Date(d);x.setHours(0,0,0,0);return x};
+const startOfWeek=d=>{const x=startOfDay(d);x.setDate(x.getDate()-(x.getDay()+6)%7);return x};
+const fold=s=>s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/đ/g,"dj");
+const plural=(n,a,b,c)=>{const m10=n%10,m100=n%100;return m10===1&&m100!==11?a:m10>=2&&m10<=4&&(m100<12||m100>14)?b:c};
+const newId=()=>(mode==="db"?"e_":"l_")+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const isIn=e=>e.type==="in";
+const sum=list=>list.reduce((a,b)=>a+b.amount,0);
+
+let exps=[];
+let amountStr="",cat=null,txType="out",noDate=false,editId=null;
+let col=null,mode="local";
+const now0=new Date();let viewY=now0.getFullYear(),viewM=now0.getMonth();
+
+/* ---- storage ---- */
+function lsGet(){try{const v=JSON.parse(localStorage.getItem("kes-v1")||"null");if(v&&Array.isArray(v.exps))return v.exps}catch(e){}return null}
+function lsSet(){try{localStorage.setItem("kes-v1",JSON.stringify({exps}))}catch(e){}}
+const cached=lsGet(); if(cached) exps=cached;
+
+async function connect(){
+  mode="local";
+  try{ if(navigator.storage&&navigator.storage.persist) await navigator.storage.persist(); }catch(e){}
+  render();
+}
+const body=e=>({kind:"exp",type:e.type==="in"?"in":"out",amount:e.amount,cat:e.cat||"",note:e.note||"",place:e.place||"",ts:e.ts,noTime:!!e.noTime,noDate:!!e.noDate});
+
+/* ---- places ---- */
+function knownPlaces(type){ // most used first, then most recent
+  const m=new Map();exps.filter(e=>!type||(isIn(e)?"in":"out")===type).sort((a,b)=>b.ts-a.ts).forEach((e,i)=>{if(!e.place)return;const k=fold(e.place);
+    const p=m.get(k)||{name:e.place,n:0,last:i};p.n++;m.set(k,p)});
+  return [...m.values()].sort((a,b)=>b.n-a.n||a.last-b.last).map(p=>p.name);
+}
+function renderPlaces(){
+  const all=knownPlaces(txType);
+  $("placeList").innerHTML=all.map(p=>`<option value="${esc(p)}"></option>`).join("");
+  const cur=fold($("place").value.trim());
+  $("recent").innerHTML=all.slice(0,6).map(p=>`<button type="button" class="pchip" data-p="${esc(p)}" aria-pressed="${fold(p)===cur}"><span class="pin"></span>${esc(p)}</button>`).join("");
+}
+$("recent").addEventListener("click",ev=>{const b=ev.target.closest(".pchip");if(!b)return;
+  $("place").value=b.getAttribute("aria-pressed")==="true"?"":b.dataset.p;renderPlaces();updateEntry()});
+$("place").addEventListener("input",()=>{renderPlaces();updateEntry()});
+function canonPlace(s){s=s.trim().replace(/\s+/g," ");if(!s)return "";const hit=knownPlaces().find(p=>fold(p)===fold(s));return hit||s}
+
+async function addMany(list){
+  if(mode==="db"&&col){
+    let ok=0;
+    for(const e of list){
+      try{await col.doc(e.id).set(body(e));ok++}
+      catch(err){toast(err&&err.code==="quota_exceeded"?"Prostor je pun. Izvezi i obriši stare transakcije.":"Upis nije uspeo. Pokušaj ponovo.");break}
+    }
+    return ok;
+  }
+  exps=exps.concat(list);lsSet();render();return list.length;
+}
+async function delExp(id){
+  if(mode==="db"&&col){ try{await col.doc(id).delete()}catch(err){toast("Brisanje nije uspelo.")} return }
+  exps=exps.filter(e=>e.id!==id);lsSet();render();
+}
+
+/* ---- entry ---- */
+function setType(t){
+  txType=t;$("typeSeg").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.t===t)));
+  $("chips").hidden=t==="in";$("entry").classList.toggle("income",t==="in");
+  $("place").placeholder=t==="in"?"Od koga ili odakle (nije obavezno)":"Radnja ili mesto (nije obavezno)";
+  $("place").setAttribute("aria-label",t==="in"?"Od koga ili odakle":"Radnja ili mesto");
+  $("sign").textContent=t==="in"?"+":"";
+  if(!editId)$("save").textContent=t==="in"?"Upiši uplatu":"Upiši trošak";
+  renderPlaces();updateEntry();
+}
+$("typeSeg").addEventListener("click",ev=>{const b=ev.target.closest("button");if(b)setType(b.dataset.t)});
+
+$("chips").innerHTML=CATS.map(c=>`<button type="button" class="chip" style="--c:var(--c-${c.id})" data-cat="${c.id}" aria-pressed="false"><span class="dot"></span>${c.name}</button>`).join("");
+function pressChips(){document.querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.cat===cat)))}
+$("chips").addEventListener("click",ev=>{const b=ev.target.closest(".chip");if(!b)return;
+  cat=cat===b.dataset.cat?null:b.dataset.cat;pressChips();updateEntry();});
+$("keys").addEventListener("click",ev=>{const b=ev.target.closest("button");if(!b)return;const k=b.dataset.k;
+  if(k==="back")amountStr=amountStr.slice(0,-1);
+  else if(!(amountStr===""&&(k==="0"||k==="00")))amountStr=(amountStr+k).slice(0,7);
+  updateEntry();});
+document.addEventListener("keydown",ev=>{ if(/INPUT|TEXTAREA/.test(ev.target.tagName))return;
+  if(/^[0-9]$/.test(ev.key)){ if(!(amountStr===""&&ev.key==="0"))amountStr=(amountStr+ev.key).slice(0,7); updateEntry(); }
+  else if(ev.key==="Backspace"){amountStr=amountStr.slice(0,-1);updateEntry();}
+  else if(ev.key==="Enter"&&!$("save").disabled){save();}});
+
+const dateIn=$("date");
+function setDateOffset(n){noDate=false;const d=new Date();d.setDate(d.getDate()-n);dateIn.value=dayKey(d);syncSeg()}
+function syncSeg(){const t=dayKey(Date.now()),y=dayKey(Date.now()-864e5);
+  dateIn.disabled=noDate;
+  $("dateSeg").querySelectorAll("button").forEach(b=>{const d=b.dataset.d;
+    b.setAttribute("aria-pressed",String(noDate?d==="x":(d==="0"&&dateIn.value===t)||(d==="1"&&dateIn.value===y)))});
+  updateEntry()}
+$("dateSeg").addEventListener("click",ev=>{const b=ev.target.closest("button");if(!b)return;
+  if(b.dataset.d==="x"){noDate=true;syncSeg()}else setDateOffset(+b.dataset.d)});
+dateIn.max=dayKey(Date.now());dateIn.addEventListener("change",()=>{noDate=false;syncSeg()});
+
+function pickedTs(){
+  if(noDate)return {ts:Date.now(),noTime:true,noDate:true};
+  const t=dayKey(Date.now());
+  if(!dateIn.value||dateIn.value===t)return {ts:Date.now(),noTime:false,noDate:false};
+  const [y,m,d]=dateIn.value.split("-").map(Number);return {ts:new Date(y,m-1,d,12,0,0).getTime(),noTime:true,noDate:false};
+}
+function updateEntry(){
+  const n=parseInt(amountStr||"0",10);
+  $("amount").textContent=fmt(n);$("amountBox").classList.toggle("empty",!n);
+  $("save").disabled=!(n>0);
+  let when=noDate?" · bez datuma":"";
+  if(!noDate&&dateIn.value&&dateIn.value!==dayKey(Date.now())){const [y,m,d]=dateIn.value.split("-").map(Number);when=` · ${d}. ${MONTHS[m-1]}`}
+  const pl=$("place").value.trim(),plTxt=pl?" · "+pl:"";
+  $("hint").textContent=txType==="in"
+    ?(!n?"Ukucaj iznos uplate.":`Uplata +${fmt(n)} din${plTxt}${when}`)
+    :(!n?"Ukucaj iznos. Ostalo nije obavezno.":`${fmt(n)} din · ${cat?catOf(cat).name:"Other"}${plTxt}${when}`);
+}
+function resetForm(){amountStr="";$("note").value="";$("place").value="";cat=null;pressChips();setDateOffset(0);setType("out");}
+async function save(){
+  const n=parseInt(amountStr||"0",10); if(!(n>0))return;
+  if(editId){ await saveEdit(n); return; }
+  const e={id:newId(),type:txType,amount:n,cat:txType==="in"?"":(cat||"ostalo"),note:$("note").value.trim(),place:canonPlace($("place").value),...pickedTs()};
+  $("save").disabled=true;
+  const ok=await addMany([e]);
+  if(ok){ toast(isIn(e)?`Upisana uplata +${fmt(n)} din`:`Upisano ${fmt(n)} din`); resetForm(); }
+  updateEntry();
+}
+$("save").onclick=save;
+
+/* ---- edit ---- */
+function markSel(){document.querySelectorAll(".item").forEach(x=>x.classList.toggle("sel",x.dataset.id===editId))}
+function startEdit(id){
+  const e=exps.find(x=>x.id===id);if(!e)return;editId=id;
+  setType(isIn(e)?"in":"out");
+  amountStr=String(e.amount);cat=!isIn(e)&&catById[e.cat]?e.cat:null;pressChips();
+  $("place").value=e.place||"";$("note").value=e.note||"";
+  if(e.noDate){noDate=true;dateIn.value=dayKey(Date.now())}else{noDate=false;dateIn.value=dayKey(e.ts)}
+  syncSeg();renderPlaces();
+  const d=new Date(e.ts),what=isIn(e)?"uplatu":"trošak";
+  $("editTxt").textContent=e.noDate?`Menjaš ${what} bez datuma`:`Menjaš ${what} od ${d.getDate()}. ${MONTHS[d.getMonth()]}`;
+  $("editBar").hidden=false;$("entry").classList.add("editing");$("save").textContent="Sačuvaj izmene";
+  markSel();updateEntry();
+  $("entry").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});
+}
+function cancelEdit(){editId=null;$("editBar").hidden=true;$("entry").classList.remove("editing");resetForm();markSel();updateEntry();}
+async function saveEdit(n){
+  const orig=exps.find(x=>x.id===editId);if(!orig){cancelEdit();return}
+  let ts=orig.ts,noTime=orig.noTime,nd=!!orig.noDate;
+  if(noDate){ if(!orig.noDate){ts=Date.now();noTime=true} nd=true }
+  else if(orig.noDate||dateIn.value!==dayKey(orig.ts)){const p=pickedTs();ts=p.ts;noTime=p.noTime;nd=false}
+  const e={id:orig.id,type:txType,amount:n,cat:txType==="in"?"":(cat||"ostalo"),note:$("note").value.trim(),place:canonPlace($("place").value),ts,noTime,noDate:nd};
+  $("save").disabled=true;let ok=true;
+  if(mode==="db"&&col){try{await col.doc(e.id).set(body(e))}catch(err){ok=false;toast("Izmena nije sačuvana. Pokušaj ponovo.")}}
+  else{exps=exps.map(x=>x.id===e.id?e:x);lsSet();render();}
+  if(ok){toast("Izmena sačuvana");cancelEdit()}else updateEntry();
+}
+$("editCancel").onclick=cancelEdit;
+
+/* ---- bulk ---- */
+const CAT_ALIASES={hrana:"hrana",izlasci:"izlasci",izlazak:"izlasci",fashion:"fashion",hobby:"hobby",hobi:"hobby",event:"event",eventi:"event",
+  tech:"tech",tehnika:"tech",tehnologija:"tech",other:"ostalo",ostalo:"ostalo",drugo:"ostalo"};
+const INCOME_WORDS=["uplata","uplate","prihod","priliv"];
+function matchCat(w){const f=fold(w);if(CAT_ALIASES[f])return CAT_ALIASES[f];
+  const hit=CATS.find(c=>f.length>=2&&c.id.startsWith(f));return hit?hit.id:null}
+function parseLine(line){
+  const m=line.trim().match(/^(?:(\?)|(\d{1,2})[.\/-](\d{1,2})(?:[.\/-](\d{2,4}))?\.?)\s+(\+)?\s*([\d.,]+)\s*(?:din|rsd)?\.?(?:\s+(.*))?$/i);
+  if(!m)return {err:"Ne razumem red. Format je: datum iznos kategorija napomena"};
+  let [,q,d,mo,y,plus,amt,rest]=m;
+  let ts,nd=false;
+  if(q){ts=Date.now();nd=true}
+  else{d=+d;mo=+mo;const now=new Date();
+    if(!y){y=now.getFullYear(); if(new Date(y,mo-1,d)>now)y--;} else {y=+y;if(y<100)y+=2000}
+    const dt=new Date(y,mo-1,d,12,0,0);
+    if(dt.getMonth()!==mo-1||dt.getDate()!==d)return {err:"Datum ne postoji"};
+    if(dt>now)return {err:"Datum je u budućnosti"};
+    ts=dt.getTime();}
+  let a=amt.replace(/[.,](\d{3})(?!\d)/g,"$1");a=Math.round(parseFloat(a.replace(",",".")));
+  if(!(a>0))return {err:"Iznos nije broj"};
+  let type=plus?"in":"out",c="";rest=(rest||"").trim();
+  const first=rest.split(/\s+/)[0]||"";
+  if(first&&INCOME_WORDS.includes(fold(first))){type="in";rest=rest.slice(first.length).trim()}
+  else if(type==="out"){const cid=first&&!first.startsWith("@")?matchCat(first):null;
+    if(cid){c=cid;rest=rest.slice(first.length).trim()}else c="ostalo";}
+  let place="",note=rest;const pm=note.match(/@([^,@]+)/);
+  if(pm){place=canonPlace(pm[1]).slice(0,40);note=note.replace(pm[0],"").replace(/^\s*,\s*|\s*,\s*$/g,"").replace(/\s+/g," ")}
+  return {e:{type,amount:a,cat:c,note:note.trim().slice(0,60),place,ts,noTime:true,noDate:nd}};
+}
+let parsed=[];
+function updateBulk(){
+  const lines=$("bulkIn").value.split(/\n/).filter(l=>l.trim());
+  parsed=lines.map(l=>({line:l,...parseLine(l)}));
+  $("preview").innerHTML=parsed.map(p=>{
+    if(p.err)return `<div class="pv bad">${esc(p.line.trim())}<br><small style="color:inherit">${p.err}</small></div>`;
+    const e=p.e,d=new Date(e.ts),inc=isIn(e),c=catOf(e.cat);
+    const when=e.noDate?"bez datuma":`${d.getDate()}. ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+    return `<div class="pv" style="--c:${inc?"var(--note)":`var(--c-${c.id})`}"><span class="dot"></span><span>${when} · ${inc?"Uplata":c.name}${e.place?` · ${esc(e.place)}`:""}${e.note?` <small>· ${esc(e.note)}</small>`:""}</span><span class="a"${inc?' style="color:var(--note)"':""}>${inc?"+":""}${fmt(e.amount)} din</span></div>`}).join("");
+  const good=parsed.filter(p=>p.e).length,bad=parsed.length-good;
+  $("bulkSave").disabled=!good;
+  $("bulkSave").textContent=!good?"Upiši":`Upiši ${good} ${plural(good,"stavku","stavke","stavki")}${bad?` (preskoči ${bad} sa greškom)`:""}`;
+}
+$("bulkIn").addEventListener("input",updateBulk);
+$("bulkSave").onclick=async()=>{
+  const list=parsed.filter(p=>p.e).map(p=>({id:newId(),...p.e}));if(!list.length)return;
+  $("bulkSave").disabled=true;
+  const ok=await addMany(list);
+  if(ok){toast(`Upisano ${ok} ${plural(ok,"stavka","stavke","stavki")}`);
+    const badLines=parsed.filter(p=>p.err).map(p=>p.line);$("bulkIn").value=ok===list.length?badLines.join("\n"):$("bulkIn").value;}
+  updateBulk();
+};
+
+/* ---- render ---- */
+$("mPrev").onclick=()=>{viewM--;if(viewM<0){viewM=11;viewY--}render()};
+$("mNext").onclick=()=>{viewM++;if(viewM>11){viewM=0;viewY++}render()};
+let breakBy="cat";
+$("breakSeg").addEventListener("click",ev=>{const b=ev.target.closest("button");if(!b)return;breakBy=b.dataset.b;
+  $("breakSeg").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));render()});
+function render(){
+  renderPlaces();
+  const now=new Date();
+  const mStart=new Date(now.getFullYear(),now.getMonth(),1).getTime(),wStart=startOfWeek(now).getTime();
+  const datedOut=exps.filter(e=>!e.noDate&&!isIn(e)),datedIn=exps.filter(e=>!e.noDate&&isIn(e));
+  $("sumLabel").textContent=`Potrošeno · ${MONTHS_FULL[now.getMonth()]}`;
+  $("sumMonth").innerHTML=`${fmt(sum(datedOut.filter(e=>e.ts>=mStart)))}<small>din</small>`;
+  $("sumWeek").innerHTML=`${fmt(sum(datedOut.filter(e=>e.ts>=wStart)))}<small>din</small>`;
+  const mIn=sum(datedIn.filter(e=>e.ts>=mStart));
+  $("sumIn").hidden=!mIn;$("sumIn").textContent=mIn?`Uplate ovog meseca: +${fmt(mIn)} din`:"";
+
+  // breakdown for viewed month (expenses only)
+  const vs=new Date(viewY,viewM,1).getTime(),ve=new Date(viewY,viewM+1,1).getTime();
+  $("mNext").disabled=viewY===now.getFullYear()&&viewM===now.getMonth();
+  $("mName").textContent=`${MONTHS_FULL[viewM]} ${viewY}`;
+  const inM=datedOut.filter(e=>e.ts>=vs&&e.ts<ve),total=sum(inM);
+  let rows;
+  if(breakBy==="cat"){const by={};inM.forEach(e=>{const k=catOf(e.cat).id;by[k]=(by[k]||0)+e.amount});
+    rows=CATS.filter(c=>by[c.id]).map(c=>({name:c.name,v:by[c.id],color:`var(--c-${c.id})`}));}
+  else{const by=new Map();inM.forEach(e=>{const k=e.place?fold(e.place):"";const r=by.get(k)||{name:e.place||"Bez radnje",v:0,color:e.place?"var(--note)":"var(--c-ostalo)"};r.v+=e.amount;by.set(k,r)});
+    rows=[...by.values()];}
+  rows.sort((a,b)=>b.v-a.v);if(rows.length>8){const rest=rows.splice(7);rows.push({name:"Ostala mesta",v:sum(rest.map(r=>({amount:r.v}))),color:"var(--c-ostalo)"})}
+  const max=Math.max(1,...rows.map(r=>r.v));
+  $("cats").innerHTML=rows.length?rows.map(r=>`<div class="cat-row" style="--c:${r.color}"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.name)}</span><span class="track"><i style="width:${r.v/max*100}%"></i></span><span class="v">${fmt(r.v)} din</span></div>`).join("")+`<div class="cat-row"><span class="label">Ukupno</span><span></span><span class="v">${fmt(total)} din</span></div>`
+    :`<div class="empty-state">Za ${MONTHS_FULL[viewM]} nema keš troškova.</div>`;
+  const vIn=sum(datedIn.filter(e=>e.ts>=vs&&e.ts<ve)),und=sum(exps.filter(e=>e.noDate&&!isIn(e)));
+  $("catsFoot").innerHTML=[vIn?`<span>Uplate u ovom mesecu: <b>+${fmt(vIn)} din</b></span>`:"",und?`<span>Troškovi bez datuma: ${fmt(und)} din (ne ulaze ni u jedan mesec)</span>`:""].join("");
+
+  updateFoot();
+  // history: undated first, then by day
+  $("histTotal").textContent=exps.length?`${exps.length} ${plural(exps.length,"upis","upisa","upisa")} · tapni za izmenu`:"";
+  if(!exps.length){$("list").innerHTML=`<div class="empty-state">Ovde će stajati svaki trošak i uplata, grupisani po danima. Probaj: ukucaj 250 i upiši. Za starije stavke otvori „Unesi prethodne transakcije“.</div>`;return}
+  const groups=[];
+  const undated=exps.filter(e=>e.noDate).sort((a,b)=>b.ts-a.ts);
+  if(undated.length)groups.push({k:"nodate",name:"Bez datuma",items:undated});
+  exps.filter(e=>!e.noDate).sort((a,b)=>b.ts-a.ts).slice(0,150).forEach(e=>{const k=dayKey(e.ts);let g=groups[groups.length-1];if(!g||g.k!==k){g={k,ts:e.ts,items:[]};groups.push(g)}g.items.push(e)});
+  const yk=dayKey(Date.now()-864e5),tk=dayKey(Date.now());
+  $("list").innerHTML=groups.map(g=>{
+    let name=g.name;if(!name){const d=new Date(g.ts);name=g.k===tk?"Danas":g.k===yk?"Juče":`${DAYS[d.getDay()]}, ${d.getDate()}. ${MONTHS[d.getMonth()]}${d.getFullYear()!==now.getFullYear()?" "+d.getFullYear():""}`}
+    const o=sum(g.items.filter(e=>!isIn(e))),i=sum(g.items.filter(isIn));
+    const tot=[o?`${fmt(o)} din`:"",i?`+${fmt(i)} din`:""].filter(Boolean).join(" · ");
+    return `<div class="dgroup"><div class="dgroup-h"><span>${name}</span><span>${tot}</span></div>`+
+      g.items.map(e=>{const inc=isIn(e),c=catOf(e.cat),t=new Date(e.ts);
+        const label=inc?"Uplata":c.name;
+        const time=e.noDate?`upisano ${t.getDate()}. ${MONTHS[t.getMonth()]}`:e.noTime?"":`${pad(t.getHours())}:${pad(t.getMinutes())}`;
+        const meta=[time,e.note?esc(e.note):""].filter(Boolean).join(" · ");
+        return `<div class="item${e.id===editId?" sel":""}" data-id="${esc(e.id)}" tabindex="0" style="--c:${inc?"var(--note)":`var(--c-${c.id})`}"><span class="dot"></span><span class="t"><div>${e.place?`${esc(e.place)} <span style="color:var(--muted);font-weight:500">· ${label}</span>`:label}</div>${meta?`<small>${meta}</small>`:""}</span><span class="a${inc?" in":""}">${inc?"+":""}${fmt(e.amount)} din</span><button class="del" type="button" data-id="${esc(e.id)}" aria-label="Obriši">×</button></div>`}).join("")+`</div>`}).join("");
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+$("list").addEventListener("keydown",ev=>{const it=ev.target.closest(".item");if(!it||ev.target!==it)return;
+  if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();ev.stopPropagation();startEdit(it.dataset.id)}});
+document.addEventListener("keydown",ev=>{if(ev.key==="Escape"&&editId)cancelEdit()});
+$("list").addEventListener("click",ev=>{const b=ev.target.closest(".del");
+  if(!b){const it=ev.target.closest(".item");if(it)startEdit(it.dataset.id);return}
+  if(b.classList.contains("arm")){if(b.dataset.id===editId)cancelEdit();delExp(b.dataset.id);return}
+  document.querySelectorAll(".del.arm").forEach(x=>{x.classList.remove("arm");x.textContent="×"});
+  b.classList.add("arm");b.textContent="Obriši?";setTimeout(()=>{if(b.isConnected){b.classList.remove("arm");b.textContent="×"}},3000);});
+
+/* ---- export ---- */
+$("exportBtn").onclick=async()=>{
+  if(!exps.length){toast("Još nema ničega za izvoz.");return}
+  const ordered=exps.filter(e=>!e.noDate).sort((a,b)=>a.ts-b.ts).concat(exps.filter(e=>e.noDate));
+  const rows=[["Datum","Vreme","Tip","Iznos (din)","Kategorija","Radnja / mesto","Napomena"]].concat(
+    ordered.map(e=>{const d=new Date(e.ts);
+      return [e.noDate?"":`${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()}`,e.noTime||e.noDate?"":`${pad(d.getHours())}:${pad(d.getMinutes())}`,
+        isIn(e)?"Uplata":"Trošak",e.amount,isIn(e)?"":catOf(e.cat).name,e.place||"",e.note]}));
+  const csv="﻿"+rows.map(r=>r.map(v=>{v=String(v);return /[;"\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}).join(";")).join("\r\n");
+  const ok=await deliver(csv,`kes-transakcije-${dayKey(Date.now())}.csv`);
+  if(ok){try{localStorage.setItem("kes-last-export",String(Date.now()))}catch(e){} updateFoot();}
+};
+async function deliver(csv,filename){
+  const file=new File([csv],filename,{type:"text/csv"});
+  if(/iPhone|iPad|Android/i.test(navigator.userAgent)&&navigator.canShare&&navigator.canShare({files:[file]})){
+    try{await navigator.share({files:[file],title:filename});return true}
+    catch(e){if(e&&e.name==="AbortError")return false}
+  }
+  try{const a=document.createElement("a");a.href=URL.createObjectURL(file);a.download=filename;document.body.appendChild(a);a.click();
+    setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);return true}
+  catch(e){toast("Izvoz nije uspeo.");return false}
+}
+function updateFoot(){
+  let t=0;try{t=+localStorage.getItem("kes-last-export")||0}catch(e){}
+  const days=t?Math.floor((Date.now()-t)/864e5):null;
+  $("mode").textContent=!exps.length?"Podaci su samo na ovom uređaju"
+    :t?`Samo na ovom uređaju · rezervna kopija ${days===0?"danas":`pre ${days} ${plural(days,"dan","dana","dana")}`}`
+    :"Samo na ovom uređaju · još nema rezervne kopije";
+}
+
+/* ---- import ---- */
+function parseCSV(text){
+  text=text.replace(/^\ufeff/,"");const first=text.split(/\r?\n/)[0];
+  const sep=(first.match(/;/g)||[]).length>=(first.match(/,/g)||[]).length?";":",";
+  const rows=[];let row=[],f="",q=false;
+  for(let i=0;i<text.length;i++){const ch=text[i];
+    if(q){if(ch==='"'){if(text[i+1]==='"'){f+='"';i++}else q=false}else f+=ch}
+    else if(ch==='"')q=true;
+    else if(ch===sep){row.push(f);f=""}
+    else if(ch==="\n"){row.push(f.replace(/\r$/,""));rows.push(row);row=[];f=""}
+    else f+=ch}
+  if(f||row.length){row.push(f.replace(/\r$/,""));rows.push(row)}
+  return rows.filter(r=>r.some(c=>c.trim()));
+}
+const sig=e=>[e.noDate?"":dayKey(e.ts),isIn(e)?"in":"out",e.amount,e.cat||"",fold(e.place||""),e.note||""].join("|");
+function importCSV(text){
+  const rows=parseCSV(text);if(rows.length<2){toast("Fajl je prazan.");return}
+  const h=rows[0].map(x=>fold(x.trim()));const ix=n=>h.findIndex(x=>x.startsWith(n));
+  const iD=ix("datum"),iV=ix("vreme"),iT=ix("tip"),iA=ix("iznos"),iK=ix("kategorija"),iR=ix("radnja"),iN=ix("napomena");
+  if(iA<0){toast("Ovo nije CSV iz Keš novčanika.");return}
+  const byName={ostalo:"ostalo"};CATS.forEach(c=>{byName[fold(c.name)]=c.id;byName[c.id]=c.id});
+  const seen=new Set(exps.map(sig));const add=[];let dup=0,bad=0;
+  for(const r of rows.slice(1)){
+    const cell=i=>i>=0&&r[i]!=null?String(r[i]).trim():"";
+    const amount=parseInt(cell(iA).replace(/[^\d]/g,""),10);if(!(amount>0)){bad++;continue}
+    const type=fold(cell(iT)).startsWith("upl")?"in":"out";
+    const k=cell(iK);const cat=type==="in"?"":(byName[fold(k)]||(k?matchCat(k):null)||"ostalo");
+    const dm=cell(iD).match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);const tm=cell(iV).match(/(\d{1,2}):(\d{2})/);
+    let ts,noTime=true,noDate=false;
+    if(dm){const d=new Date(+dm[3],+dm[2]-1,+dm[1],12,0,0);if(tm){d.setHours(+tm[1],+tm[2]);noTime=false}ts=d.getTime()}
+    else{ts=Date.now();noDate=true}
+    const e={id:newId(),type,amount,cat,place:cell(iR).slice(0,40),note:cell(iN).slice(0,60),ts,noTime,noDate};
+    const sg=sig(e);if(seen.has(sg)){dup++;continue}seen.add(sg);add.push(e);
+  }
+  if(add.length){exps=exps.concat(add);lsSet();render()}
+  toast(`Uvezeno ${add.length}${dup?`, preskočeno ${dup} koje već postoje`:""}${bad?`, ${bad} neispravnih redova`:""}`);
+}
+$("importBtn").onclick=()=>$("importIn").click();
+$("importIn").addEventListener("change",async()=>{const f=$("importIn").files[0];if(!f)return;
+  try{importCSV(await f.text())}catch(e){toast("Fajl ne može da se pročita.")}
+  $("importIn").value="";});
+
+let tt;function toast(m){const t=$("toast");t.textContent=m;t.classList.add("on");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("on"),2200)}
+
+setDateOffset(0);setType("out");render();connect();
+if("serviceWorker" in navigator) addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+</script>
+</body>
+</html>
